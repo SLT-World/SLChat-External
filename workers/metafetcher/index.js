@@ -57,21 +57,21 @@ export default {
                 if (done) break;
                 buffer += value;
 
-                if (raw) {
-                    if (!capturingHead) {
-                        const start = buffer.match(/<head[^>]*>/i);
-                        if (start) {
-                            capturingHead = true;
-                            headContent = buffer.slice(start.index);
-                        }
-                    }
-                    else headContent += value;
-                    if (capturingHead && /<\/head>/i.test(headContent)) {
-                        controller.abort();
-                        break;
+                //if (raw) {
+                if (!capturingHead) {
+                    const start = buffer.match(/<head[^>]*>/i);
+                    if (start) {
+                        capturingHead = true;
+                        headContent = buffer.slice(start.index);
                     }
                 }
-                else {
+                else headContent += value;
+                if (capturingHead && /<\/head>/i.test(headContent)) {
+                    controller.abort();
+                    break;
+                }
+                //}
+                if (!raw)  {
                     if (!site) site = extractMeta(buffer, "og:site_name");
                     if (!title) {
                         const meta = buffer.match(/<title[^>]*>(.*?)<\/title>/i);
@@ -95,7 +95,7 @@ export default {
             }
         } catch { }
 
-        if (raw) return new Response(headContent, { headers: { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
-        return new Response(JSON.stringify({ site, title, description, image, theme }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
+        if (raw) return new Response(headContent, { headers: { "Content-Type": "text/plain; charset=UTF-8", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
+        return new Response(JSON.stringify({ site, title, description, image, theme, headContent }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
     }
 };
