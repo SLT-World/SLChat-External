@@ -1,7 +1,7 @@
 export default {
     async fetch(request, env, ctx) {
         function extractMeta(buffer, name) {
-            const re = new RegExp(`<meta[^>]+(?:property|name)="${name}"[^>]+content="([^"]+)"[^>]*>|<meta[^>]+content="([^"]+)"[^>]+(?:property|name)="${name}"[^>]*>i`);
+            const re = new RegExp(`<meta[^>]+(?:property|name)="${name}"[^>]+content="([^"]+)"[^>]*>|<meta[^>]+content="([^"]+)"[^>]+(?:property|name)="${name}"[^>]*>`, "i");
 
             const match = buffer.match(re);
             if (!match) return null;
@@ -57,21 +57,21 @@ export default {
                 if (done) break;
                 buffer += value;
 
-                //if (raw) {
-                if (!capturingHead) {
-                    const start = buffer.match(/<head[^>]*>/i);
-                    if (start) {
-                        capturingHead = true;
-                        headContent = buffer.slice(start.index);
+                if (raw) {
+                    if (!capturingHead) {
+                        const start = buffer.match(/<head[^>]*>/i);
+                        if (start) {
+                            capturingHead = true;
+                            headContent = buffer.slice(start.index);
+                        }
+                    }
+                    else headContent += value;
+                    if (capturingHead && /<\/head>/i.test(headContent)) {
+                        controller.abort();
+                        break;
                     }
                 }
-                else headContent += value;
-                if (capturingHead && /<\/head>/i.test(headContent)) {
-                    controller.abort();
-                    break;
-                }
-                //}
-                if (!raw)  {
+                else  {
                     if (!site) site = extractMeta(buffer, "og:site_name");
                     if (!title) {
                         const meta = buffer.match(/<title[^>]*>(.*?)<\/title>/i);
@@ -96,6 +96,6 @@ export default {
         } catch { }
 
         if (raw) return new Response(headContent, { headers: { "Content-Type": "text/plain; charset=UTF-8", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
-        return new Response(JSON.stringify({ site, title, description, image, theme, headContent }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
+        return new Response(JSON.stringify({ site, title, description, image, theme }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
     }
 };
