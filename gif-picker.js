@@ -17,7 +17,7 @@ async function toggleGifCard() {
   
 async function load_gifs(url) {
   var gif_grid = document.getElementById('gif_grid');
-  gif_grid.innerHTML = `<i class="bx bx-loader-dots bx-spin bx-md" style="height: 35px;background: transparent;"></i>`;
+  gif_grid.innerHTML = `<i class="bx bx-loader-dots bx-spin bx-md" style="height: 18px;font-size: 18px;background: transparent;"></i>`;
   
   try {
     var response = await fetch(url);
