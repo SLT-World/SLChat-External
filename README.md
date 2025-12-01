@@ -1,2 +1,5 @@
-# SLChat-Plugins
-Plugins for SLChat made by me
+# SLChat External
+External SLChat features & plugins repository
+
+## Overview
+This repository contains files for extending SLChat functionality.
