@@ -93,7 +93,7 @@ export default {
             }
         } catch { }
 
-        if (raw) return new Response(headContent, { headers: { "Content-Type": "text/html", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
+        if (raw) return new Response(headContent, { headers: { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
         return new Response(JSON.stringify({ site, title, description, image, theme }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
     }
 };
