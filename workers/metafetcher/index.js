@@ -1,5 +1,12 @@
 export default {
     async fetch(request, env, ctx) {
+        function extractMeta(buffer, name) {
+            const re = new RegExp(`<meta[^>]+(?:property|name)="${name}"[^>]+content="([^"]+)"[^>]*>|<meta[^>]+content="([^"]+)"[^>]+(?:property|name)="${name}"[^>]*>i`);
+
+            const match = buffer.match(re);
+            if (!match) return null;
+            return match[1] || match[2];
+        }
         const parameters = new URL(request.url).searchParams;
         const url = parameters.get("url");
         const raw = parameters.get("raw") === "true";
@@ -15,7 +22,21 @@ export default {
         const controller = new AbortController();
         const signal = controller.signal;
 
-        const upstream = await fetch(target.toString(), { signal, headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0"} });
+        const upstream = await fetch(target.toString(), {
+            method: "GET",
+            redirect: "follow",
+            signal,
+            cf: { scrapeShield: false }
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0"
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "identity",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1"
+            }
+        });
+
         const reader = upstream.body.pipeThrough(new TextDecoderStream()).getReader();
 
         let buffer = "";
@@ -43,42 +64,23 @@ export default {
                             capturingHead = true;
                             headContent = buffer.slice(start.index);
                         }
-                    } else headContent += value;
+                    }
+                    else headContent += value;
                     if (capturingHead && /<\/head>/i.test(headContent)) {
                         controller.abort();
                         break;
                     }
                 }
                 else {
-                    if (!site) {
-                        const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']og:site_name["'][^>]*content\s*=\s*["']([^"']+)["']/i);
-                        if (meta) site = meta[1].trim();
-                    }
-
+                    if (!site) site = extractMeta(buffer, "og:site_name");
                     if (!title) {
                         const meta = buffer.match(/<title[^>]*>(.*?)<\/title>/i);
                         if (meta) title = meta[1].trim();
                     }
-
-                    if (!description) {
-                        const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']og:description["'][^>]*content\s*=\s*["']([^"']+)["']/i);
-                        if (meta) description = meta[1].trim();
-                    }
-
-                    if (!description) {
-                        const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']description["'][^>]*content\s*=\s*["']([^"']+)["']/i);
-                        if (meta) description = meta[1].trim();
-                    }
-
-                    if (!image) {
-                        const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']og:image["'][^>]*content\s*=\s*["']([^"']+)["']/i);
-                        if (meta) image = meta[1].trim();
-                    }
-
-                    if (!theme) {
-                        const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']theme-color["'][^>]*content\s*=\s*["']([^"']+)["']/i);
-                        if (meta) theme = meta[1].trim();
-                    }
+                    if (!description) description = extractMeta(buffer, "og:description");
+                    if (!description) description = extractMeta(buffer, "description");
+                    if (!image) image = extractMeta(buffer, "og:image");
+                    if (!theme) theme = extractMeta(buffer, "theme-color");
 
                     if (buffer.includes("</head>") || isFinished()) {
                         controller.abort();
@@ -87,8 +89,8 @@ export default {
                 }
 
                 if (buffer.length > 200_000) {
-                  controller.abort();
-                  break;
+                    controller.abort();
+                    break;
                 }
             }
         } catch { }
