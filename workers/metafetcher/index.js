@@ -1,13 +1,13 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url).searchParams.get("url");
-    if (!url) return new Response("Missing URL", { status: 400 });
+    if (!url) return new Response(JSON.stringify({ error: "Missing URL" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
     if (!/^https?:\/\//i.test(url)) return new Response("Invalid URL", { status: 400 });
 
     let target;
     try { target = new URL(url); }
-    catch { return new Response("Invalid URL", { status: 400 }); }
+    catch { return new Response(JSON.stringify({ error: "Invalid URL" }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
     const controller = new AbortController();
     const signal = controller.signal;
@@ -21,9 +21,9 @@ export default {
     let title = null;
     let description = null;
     let image = null;
-    let themeColor = null;
+    let theme = null;
 
-    const isFinished = () => site && title && description && image && themeColor;
+    const isFinished = () => site && title && description && image && theme;
 
     try {
       while (true) {
@@ -55,9 +55,9 @@ export default {
           if (meta) image = meta[1].trim();
         }
 
-        if (!themeColor) {
+        if (!theme) {
           const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']theme-color["'][^>]*content\s*=\s*["']([^"']+)["']/i);
-          if (meta) themeColor = meta[1].trim();
+          if (meta) theme = meta[1].trim();
         }
 
         if (buffer.includes("</head>") || isFinished()) {
@@ -72,9 +72,6 @@ export default {
       }
     } catch { }
 
-    return new Response(
-      JSON.stringify({ site, title, description, image, themeColor }, null, 2),
-      { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } }
-    );
+    return new Response(JSON.stringify({ site, title, description, image, theme }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
   }
 };
