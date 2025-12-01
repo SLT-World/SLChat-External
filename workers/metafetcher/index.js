@@ -29,9 +29,9 @@ export default {
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        buffer += value.toLowerCase();
+        buffer += value;
         if (!site) {
-          const meta = buffer.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i);
+          const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']og:site_name["'][^>]*content\s*=\s*["']([^"']+)["']/i);
           if (meta) site = meta[1].trim();
         }
 
@@ -41,22 +41,22 @@ export default {
         }
 
         if (!description) {
-          const meta = buffer.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+          const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']og:description["'][^>]*content\s*=\s*["']([^"']+)["']/i);
           if (meta) description = meta[1].trim();
         }
 
         if (!description) {
-          const meta = buffer.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+          const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']description["'][^>]*content\s*=\s*["']([^"']+)["']/i);
           if (meta) description = meta[1].trim();
         }
 
         if (!image) {
-          const meta = buffer.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+          const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']og:image["'][^>]*content\s*=\s*["']([^"']+)["']/i);
           if (meta) image = meta[1].trim();
         }
 
         if (!themeColor) {
-          const meta = buffer.match(/<meta[^>]+name=["']theme-color["'][^>]+content=["']([^"']+)["']/i);
+          const meta = buffer.match(/<meta[^>]+(?:property|name)\s*=\s*["']theme-color["'][^>]*content\s*=\s*["']([^"']+)["']/i);
           if (meta) themeColor = meta[1].trim();
         }
 
