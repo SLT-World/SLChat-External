@@ -1,15 +1,14 @@
 export default {
     async fetch(request, env, ctx) {
         function extractMeta(buffer, name) {
-            const re = new RegExp(`<meta[^>]+(?:property|name)="${name}"[^>]+content="([^"]+)"[^>]*>|<meta[^>]+content="([^"]+)"[^>]+(?:property|name)="${name}"[^>]*>`, "i");
-
-            const match = buffer.match(re);
+            const match = buffer.match(new RegExp(`<meta[^>]+(?:property|name)=["']?${name}["']?[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]*>|<meta[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]+(?:property|name)=["']?${name}["']?[^>]*>`, "i"));
             if (!match) return null;
-            return match[1] || match[2];
+            return match[1] || match[2] || match[3] || match[4] || match[5] || match[6] || null;
         }
         const parameters = new URL(request.url).searchParams;
         const url = parameters.get("url");
         const raw = parameters.get("raw") === "true";
+        const firefoxUA = parameters.get("discord") === "false";
 
         if (!url) return new Response(JSON.stringify({ error: "Missing URL" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
@@ -28,7 +27,7 @@ export default {
             signal,
             cf: { scrapeShield: false },
             headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0",
+                "User-Agent": firefoxUA ? "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0" : "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/)",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.5",
                 "Accept-Encoding": "identity",
@@ -73,6 +72,8 @@ export default {
                 }
                 else  {
                     if (!site) site = extractMeta(buffer, "og:site_name");
+                    if (!title) title = extractMeta(buffer, "og:title");
+                    if (!title) title = extractMeta(buffer, "title");
                     if (!title) {
                         const meta = buffer.match(/<title[^>]*>(.*?)<\/title>/i);
                         if (meta) title = meta[1].trim();
