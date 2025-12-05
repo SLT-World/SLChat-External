@@ -73,14 +73,17 @@ export default {
                 else  {
                     if (!site) site = extractMeta(buffer, "og:site_name");
                     if (!title) title = extractMeta(buffer, "og:title");
+                    if (!title) title = extractMeta(buffer, "twitter:title");
                     if (!title) title = extractMeta(buffer, "title");
                     if (!title) {
                         const meta = buffer.match(/<title[^>]*>(.*?)<\/title>/i);
                         if (meta) title = meta[1].trim();
                     }
                     if (!description) description = extractMeta(buffer, "og:description");
+                    if (!description) description = extractMeta(buffer, "twitter:description");
                     if (!description) description = extractMeta(buffer, "description");
                     if (!image) image = extractMeta(buffer, "og:image");
+                    if (!image) image = extractMeta(buffer, "twitter:image");
                     if (!theme) theme = extractMeta(buffer, "theme-color");
 
                     if (buffer.includes("</head>") || isFinished()) {
