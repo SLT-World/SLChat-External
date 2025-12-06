@@ -92,8 +92,6 @@ export default {
                     }
                 }
                 else {
-                    //if (!buffer.includes("og:") && !buffer.includes("twitter:") && !buffer.includes("<title"))
-                    //    continue;
                     if (!site) site = extractMeta(buffer, "og:site_name");
                     if (!title) title = extractMeta(buffer, "og:title");
                     if (!title) title = extractMeta(buffer, "twitter:title");
@@ -115,13 +113,13 @@ export default {
                         controller.abort();
                         break;
                     }
+                    if (buffer.length > 100000 && title && description) {
+                        controller.abort();
+                        break;
+                    }
                 }
                 
                 if (buffer.length > 200000) {
-                    controller.abort();
-                    break;
-                }
-                else if (buffer.length > 100000 && title && description) {
                     controller.abort();
                     break;
                 }
