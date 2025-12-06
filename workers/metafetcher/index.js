@@ -1,7 +1,8 @@
 export default {
     async fetch(request, env, ctx) {
         function extractMeta(buffer, name) {
-            const match = buffer.match(new RegExp(`<meta[^>]+(?:property|name)=["']?${name.replace(/:/g, "[:]")}["']?[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]*>|<meta[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]+(?:property|name)=["']?${name.replace(/:/g, "[:]")}["']?[^>]*>`, "i"));
+            const escape = name.replace(/:/g, "[:]");
+            const match = buffer.match(new RegExp(`<meta[^>]+(?:property|name)=["']?${escape}["']?[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]*>|<meta[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]+(?:property|name)=["']?${escape}["']?[^>]*>`, "i"));
             if (!match) return null;
             return match[1] || match[2] || match[3] || match[4] || match[5] || match[6] || null;
         }
@@ -51,9 +52,11 @@ export default {
         catch { return new Response(JSON.stringify({ error: "Fetch failed" }), { status: 500, headers: { "Content-Type": "application/json" } }); }
 
         if (Number(upstream.headers.get("content-length")) > 500_000) return new Response(JSON.stringify({ error: "File too large" }), { status: 413, headers: { "Content-Type": "application/json" } });
-        if (!raw && !(upstream.headers.get("content-type") || "").includes("text/html")) return new Response(JSON.stringify({ error: "Unsupported Content Type" }), { status: 415, headers: { "Content-Type": "application/json" } });
+        const contentType = upstream.headers.get("content-type") || "";
+        if (!raw && !contentType.includes("text/html")) return new Response(JSON.stringify({ error: "Unsupported Content Type" }), { status: 415, headers: { "Content-Type": "application/json" } });
 
-        const reader = upstream.body.pipeThrough(new TextDecoderStream()).getReader();
+        const charsetMatch = contentType.match(/charset=([^;]+)/i);
+        const reader = upstream.body.pipeThrough(new TextDecoderStream(charsetMatch ? charsetMatch[1] : "utf-8")).getReader();
 
         let buffer = "";
         let headContent = "";
@@ -72,7 +75,7 @@ export default {
                 const { value, done } = await reader.read();
                 if (done) break;
                 buffer += value;
-                if (buffer.length > 20000) buffer = buffer.slice(-(20000 / 2));
+                if (buffer.length > 20000) buffer = buffer.slice(-10000);
 
                 if (raw) {
                     if (!capturingHead) {
@@ -104,7 +107,7 @@ export default {
                     if (!description) description = extractMeta(buffer, "description");
                     if (!image) image = extractMeta(buffer, "og:image");
                     if (!image) image = extractMeta(buffer, "twitter:image");
-                    if (image && image.startsWith("/")) image = target.origin + image;
+                    if (image && !image.startsWith("http")) image = new URL(image, target.origin + target.pathname).href;
 
                     if (!theme) theme = extractMeta(buffer, "theme-color");
 
