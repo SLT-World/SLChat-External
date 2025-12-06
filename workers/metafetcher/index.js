@@ -1,10 +1,17 @@
 export default {
     async fetch(request, env, ctx) {
         function extractMeta(buffer, name) {
-            const match = buffer.match(new RegExp(`<meta[^>]+(?:property|name)=["']?${name}["']?[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]*>|<meta[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]+(?:property|name)=["']?${name}["']?[^>]*>`, "i"));
+            const match = buffer.match(new RegExp(`<meta[^>]+(?:property|name)=["']?${name.replace(/:/g, "[:]")}["']?[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]*>|<meta[^>]+content=(?:"([^"]+)"|'([^']+)'|([^\\s>]+))[^>]+(?:property|name)=["']?${name.replace(/:/g, "[:]")}["']?[^>]*>`, "i"));
             if (!match) return null;
             return match[1] || match[2] || match[3] || match[4] || match[5] || match[6] || null;
         }
+
+        const cacheKey = new Request(request.url, { method: "GET" });
+        const cache = caches.default;
+
+        const cached = await cache.match(cacheKey);
+        if (cached) return cached;
+
         const parameters = new URL(request.url).searchParams;
         const url = parameters.get("url");
         const raw = parameters.get("raw") === "true";
@@ -18,23 +25,33 @@ export default {
         try { target = new URL(url); }
         catch { return new Response(JSON.stringify({ error: "Invalid URL" }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
+        if (request.headers.get("host") == target.hostname) return new Response(JSON.stringify({ error: "Blocked" }), { status: 400, headers: { "Content-Type": "application/json" } });
+
         const controller = new AbortController();
         const signal = controller.signal;
+        const timeout = setTimeout(() => controller.abort(), 10000);
 
-        const upstream = await fetch(target.toString(), {
-            method: "GET",
-            redirect: "follow",
-            signal,
-            cf: { scrapeShield: false },
-            headers: {
-                "User-Agent": firefoxUA ? "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0" : "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/)",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Accept-Encoding": "identity",
-                "Connection": "keep-alive",
-                "Upgrade-Insecure-Requests": "1"
-            }
-        });
+        let upstream;
+        try {
+            upstream = await fetch(target.toString(), {
+                method: "GET",
+                redirect: "follow",
+                signal,
+                cf: { scrapeShield: false },
+                headers: {
+                    "User-Agent": firefoxUA ? "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0" : "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/)",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.5",
+                    "Accept-Encoding": "identity",
+                    "Connection": "keep-alive",
+                    "Upgrade-Insecure-Requests": "1"
+                }
+            });
+        }
+        catch { return new Response(JSON.stringify({ error: "Fetch failed" }), { status: 500, headers: { "Content-Type": "application/json" } }); }
+
+        if (Number(upstream.headers.get("content-length")) > 500_000) return new Response(JSON.stringify({ error: "File too large" }), { status: 413, headers: { "Content-Type": "application/json" } });
+        if (!raw && !(upstream.headers.get("content-type") || "").includes("text/html")) return new Response(JSON.stringify({ error: "Unsupported Content Type" }), { status: 415, headers: { "Content-Type": "application/json" } });
 
         const reader = upstream.body.pipeThrough(new TextDecoderStream()).getReader();
 
@@ -55,6 +72,7 @@ export default {
                 const { value, done } = await reader.read();
                 if (done) break;
                 buffer += value;
+                if (buffer.length > 20000) buffer = buffer.slice(-(20000 / 2));
 
                 if (raw) {
                     if (!capturingHead) {
@@ -70,7 +88,9 @@ export default {
                         break;
                     }
                 }
-                else  {
+                else {
+                    //if (!buffer.includes("og:") && !buffer.includes("twitter:") && !buffer.includes("<title"))
+                    //    continue;
                     if (!site) site = extractMeta(buffer, "og:site_name");
                     if (!title) title = extractMeta(buffer, "og:title");
                     if (!title) title = extractMeta(buffer, "twitter:title");
@@ -84,6 +104,8 @@ export default {
                     if (!description) description = extractMeta(buffer, "description");
                     if (!image) image = extractMeta(buffer, "og:image");
                     if (!image) image = extractMeta(buffer, "twitter:image");
+                    if (image && image.startsWith("/")) image = target.origin + image;
+
                     if (!theme) theme = extractMeta(buffer, "theme-color");
 
                     if (buffer.includes("</head>") || isFinished()) {
@@ -91,15 +113,26 @@ export default {
                         break;
                     }
                 }
-
-                if (buffer.length > 200_000) {
+                
+                if (buffer.length > 200000) {
+                    controller.abort();
+                    break;
+                }
+                else if (buffer.length > 100000 && title && description) {
                     controller.abort();
                     break;
                 }
             }
         } catch { }
 
-        if (raw) return new Response(headContent, { headers: { "Content-Type": "text/plain; charset=UTF-8", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
-        return new Response(JSON.stringify({ site, title, description, image, theme }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net" } });
+        clearTimeout(timeout);
+
+        let response;
+
+        if (raw) response = new Response(headContent, { headers: { "Content-Type": "text/plain; charset=UTF-8", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net", "Cache-Control": "public, max-age=86400" } });
+        else response = new Response(JSON.stringify({ site, title, description, image, theme }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://slchat.alwaysdata.net", "Cache-Control": "public, max-age=86400" } });
+
+        ctx.waitUntil(cache.put(cacheKey, response.clone()));
+        return response;
     }
 };
