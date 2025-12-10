@@ -93,6 +93,7 @@ export default {
                 }
                 else {
                     if (!site) site = extractMeta(buffer, "og:site_name");
+                    if (!site) site = extractMeta(buffer, "twitter:site");
                     if (!title) title = extractMeta(buffer, "og:title");
                     if (!title) title = extractMeta(buffer, "twitter:title");
                     if (!title) title = extractMeta(buffer, "title");
