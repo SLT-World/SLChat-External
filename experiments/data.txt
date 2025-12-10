@@ -1,1 +1,1 @@
-Nameplate|flag|nameplate.js
+Nameplate|signature|nameplate.js
