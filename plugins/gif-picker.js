@@ -1,3 +1,6 @@
+var pluginControls = document.querySelector('.controls');
+
+
 async function toggleGifCard() {
   var gif_card = document.getElementById('gif_card');
   if (gif_card) { 
@@ -47,12 +50,12 @@ async function load_gifs(url) {
   }
 }
 
-if (controlsSection) {
+if (pluginControls) {
   var newButton = document.createElement("button");
   newButton.innerHTML = `<i class="bx bx-image-landscape"></i>`;
   newButton.onclick = () => { toggleGifCard(); };
   
-  controlsSection.insertBefore(newButton, controlsSection.querySelector('button[onclick="sendMessage()"]'));
+  pluginControls.insertBefore(newButton, pluginControls.querySelector('button[onclick="sendMessage()"]'));
 
   document.body.insertAdjacentHTML('beforeend', `<div id="gif_card" style="box-shadow: 0 5px 10px rgb(0 0 0 / 0.75); border: 1px solid var(--light-gray-color); position: fixed; max-width: 365px; max-height: 400px; background: var(--darker-secondary-color); padding: 10px;bottom: 80px;right: 20px;top: unset;left: unset;transform: unset;" class="card">
     <div style="display: flex; align-items: center; justify-content: flex-end; position: relative;">
