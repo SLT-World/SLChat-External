@@ -1,6 +1,3 @@
-var controlsSection = document.querySelector('.controls');
-
-  
 async function toggleGifCard() {
   var gif_card = document.getElementById('gif_card');
   if (gif_card) { 
