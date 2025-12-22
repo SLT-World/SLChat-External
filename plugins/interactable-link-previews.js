@@ -5,8 +5,8 @@ style.appendChild(document.createTextNode(`iframe { margin: 0 !important; max-wi
 .bluesky-embed { margin: 0 !important; }
 .instagram-media { max-width: 400px !important; width: 100% !important; min-width: unset !important; }
 .gist-embed { background: var(--primary-color); border-radius: 5px; border: 1px solid var(--light-gray-color); max-width: 800px; }
-.embed.site { border: none; padding: 0 0 10px 0; display: flex; flex-direction: column; gap: 10px; }
-.embed.site > img { order: -1; border: none; border-radius: 0; }
+.embed.site { border: none; padding: 0 0 10px 0; display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.embed.site > img { order: -1; border: none; border-radius: 0; background: var(--primary-color); width: 100%; }
 .embed.site > div { padding: 0 10px; }
 .embed.site > .field { gap: 10px; }
 `));
