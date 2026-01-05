@@ -11,7 +11,7 @@ async function translateMessage() {
         const translatedText = data[0][0];
         const detectedLanguage = new Intl.DisplayNames(['en'], { type: 'language' }).of(data[0][1]);
         if (messageElement.classList.contains("message-container")) messageElement = messageElement.querySelector(".text.message");
-        messageElement.innerHTML = parseMarkdown(translatedText) + `<p class="subtext" style="display: block;"><i class="bx bx-translate" style="vertical-align: middle;"></i> Translated from ${detectedLanguage} • <button class="button" onclick="reverseTranslate(${selectedMessage})" style="padding: 0;height: unset;background: transparent;color: cornflowerblue;display: inline-block;">Original</button></p>`;
+        messageElement.innerHTML = parseMarkdown(translatedText) + `<p class="subtext" style="display: block;"><i class="bx bx-translate" style="vertical-align: middle;"></i> Translated from ${detectedLanguage} \u2022 <button class="button" onclick="reverseTranslate(${selectedMessage})" style="padding: 0;height: unset;background: transparent;color: cornflowerblue;display: inline-block;">Original</button></p>`;
     }
     catch (err) {
         console.error(err);
